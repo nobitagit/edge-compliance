@@ -726,7 +726,7 @@
       const el = document.createElement('div');
       el.className = 'card';
       el.innerHTML = `
-        ${GAME_CARDS[i].image ? `<div class="card-image" style="background-image: url('${GAME_CARDS[i].image}')"></div>` : ''}
+        <div class="card-image" style="background-image: url('isit.png')"></div>
         <div class="card-body">
           <div class="card-number">${String(i + 1).padStart(2, '0')} / ${String(GAME_CARDS.length).padStart(2, '0')}</div>
           <div class="card-question">${GAME_CARDS[i].title}</div>
