@@ -650,6 +650,16 @@
 
     startBtn.addEventListener('click', startGame);
 
+    const GAME_SIZE = 10;
+
+    // Returns a new array of `count` cards sampled without replacement from `arr`
+    function sampleCards(arr, count) {
+      const shuffled = arr.slice().sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, count);
+    }
+
+    let GAME_CARDS = []; // populated fresh each game
+
     let current = 0;
     let cardEls = [];
     let isDragging = false;
@@ -674,9 +684,10 @@
       cardEls = [];
       responses = [];
       current = 0;
+      GAME_CARDS = sampleCards(CARDS, GAME_SIZE);
       updateUI();
 
-      for (let i = CARDS.length - 1; i >= 0; i--) {
+      for (let i = GAME_CARDS.length - 1; i >= 0; i--) {
         const el = createCardEl(i);
         stack.appendChild(el);
         cardEls[i] = el;
@@ -685,7 +696,7 @@
       // Assign z-index and resting transforms once — never touch again during drag
       cardEls.forEach((el, i) => {
         const depth = i - current;
-        el.style.zIndex    = CARDS.length - depth;
+        el.style.zIndex    = GAME_CARDS.length - depth;
         el.style.transform = restTransform(depth);
         el.style.transition = 'none';
         el.style.visibility = depth > 3 ? 'hidden' : 'visible';
@@ -696,7 +707,7 @@
 
     function repositionStack() {
       cardEls.slice(current).forEach((el, idx) => {
-        el.style.zIndex     = CARDS.length - idx;
+        el.style.zIndex     = GAME_CARDS.length - idx;
         el.style.visibility = idx > 3 ? 'hidden' : 'visible';
         if (idx === 0) {
           // New top card: no transition at all — it's already in resting position
@@ -715,10 +726,10 @@
       const el = document.createElement('div');
       el.className = 'card';
       el.innerHTML = `
-        ${CARDS[i].image ? `<div class="card-image" style="background-image: url('${CARDS[i].image}')"></div>` : ''}
+        ${GAME_CARDS[i].image ? `<div class="card-image" style="background-image: url('${GAME_CARDS[i].image}')"></div>` : ''}
         <div class="card-body">
-          <div class="card-number">${String(i + 1).padStart(2, '0')} / ${String(CARDS.length).padStart(2, '0')}</div>
-          <div class="card-question">${CARDS[i].title}</div>
+          <div class="card-number">${String(i + 1).padStart(2, '0')} / ${String(GAME_CARDS.length).padStart(2, '0')}</div>
+          <div class="card-question">${GAME_CARDS[i].title}</div>
         </div>
         <div class="stamp stamp-yes">Yes</div>
         <div class="stamp stamp-no">No</div>
@@ -770,7 +781,7 @@
 
     function updateUI() {
       const done = current;
-      const total = CARDS.length;
+      const total = GAME_CARDS.length;
       counter.textContent = `${Math.min(done + 1, total)} / ${total}`;
       progressBar.style.width = `${(done / total) * 100}%`;
     }
@@ -779,7 +790,7 @@
       const el = cardEls[current];
       if (!el) return;
 
-      const card    = CARDS[current];
+      const card    = GAME_CARDS[current];
       const answer  = direction === 'right'; // true = yes, false = no
       responses.push({ card, answer, correct: answer === card.correct });
 
@@ -793,7 +804,7 @@
       current++;
       updateUI();
 
-      if (current >= CARDS.length) {
+      if (current >= GAME_CARDS.length) {
         setTimeout(showEnd, 380);
       } else {
         repositionStack();
@@ -803,7 +814,7 @@
 
     function showEnd() {
       const correctCount = responses.filter(r => r.correct).length;
-      const total        = CARDS.length;
+      const total        = GAME_CARDS.length;
       const bucket       = BUCKETS.find(b => correctCount >= b.min && correctCount < b.max);
 
       document.getElementById('endScore').textContent = `${correctCount} / ${total} correct`;
@@ -819,8 +830,8 @@
 
     restartBtn.addEventListener('click', showIntro);
 
-    btnYes.addEventListener('click', () => { if (current < CARDS.length) dismissCard('right'); });
-    btnNo.addEventListener('click',  () => { if (current < CARDS.length) dismissCard('left'); });
+    btnYes.addEventListener('click', () => { if (current < GAME_CARDS.length) dismissCard('right'); });
+    btnNo.addEventListener('click',  () => { if (current < GAME_CARDS.length) dismissCard('left'); });
 
     // ── Drag / swipe ──────────────────────────────────────────────────────
     // Single module-level drag state — one set of handlers on document,
@@ -939,7 +950,7 @@
 
     // ── Keyboard support ─────────────────────────────────────────────────
     document.addEventListener('keydown', e => {
-      if (current >= CARDS.length) return;
+      if (current >= GAME_CARDS.length) return;
       if (e.key === 'ArrowRight') dismissCard('right');
       if (e.key === 'ArrowLeft')  dismissCard('left');
     });
