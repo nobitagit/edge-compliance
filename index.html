@@ -254,10 +254,14 @@
       display: none;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       text-align: center;
-      padding: 40px 32px;
+      padding: 100px 24px 48px;
       gap: 16px;
+      width: 100%;
+      max-width: 680px;
+      overflow-y: auto;
+      max-height: 100dvh;
     }
     .end-screen.visible { display: flex; }
 
@@ -302,6 +306,85 @@
       transition: background 0.2s, color 0.2s;
     }
     .restart-btn:hover { background: var(--ink); color: var(--bg); }
+
+    /* ── Recap table ── */
+    .recap {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 8px;
+      text-align: left;
+    }
+
+    .recap-row {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: 20px 1fr;
+      grid-template-rows: auto auto auto;
+      column-gap: 12px;
+      row-gap: 4px;
+    }
+
+    .recap-row.correct   { border-left: 3px solid var(--swipe-yes); }
+    .recap-row.incorrect { border-left: 3px solid var(--swipe-no);  }
+
+    .recap-icon {
+      grid-row: 1 / 2;
+      grid-column: 1 / 2;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      padding-top: 1px;
+    }
+
+    .recap-question {
+      grid-row: 1 / 2;
+      grid-column: 2 / 3;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--ink);
+      line-height: 1.5;
+    }
+
+    .recap-answer {
+      grid-row: 2 / 3;
+      grid-column: 2 / 3;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 400;
+    }
+    .recap-row.correct   .recap-answer { color: var(--swipe-yes); }
+    .recap-row.incorrect .recap-answer { color: var(--swipe-no);  }
+
+    .recap-meta {
+      grid-row: 3 / 4;
+      grid-column: 2 / 3;
+      margin-top: 6px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .recap-category {
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+
+    .recap-reason {
+      font-size: 0.78rem;
+      color: var(--ink-light);
+      line-height: 1.55;
+      font-weight: 300;
+    }
   </style>
 </head>
 <body>
@@ -336,6 +419,7 @@
     <div class="end-score" id="endScore"></div>
     <div class="end-title" id="endTitle"></div>
     <div class="end-sub" id="endSub"></div>
+    <div class="recap" id="recap"></div>
     <button class="restart-btn" id="restartBtn">Start over</button>
   </div>
 
@@ -820,6 +904,27 @@
       document.getElementById('endScore').textContent = `${correctCount} / ${total} correct`;
       document.getElementById('endTitle').innerHTML   = bucket.message;
       document.getElementById('endSub').textContent   = 'All cards reviewed';
+
+      // Build recap
+      const recapEl = document.getElementById('recap');
+      recapEl.innerHTML = responses.map(({ card, answer, correct }) => {
+        const userLabel  = answer ? 'Yes' : 'No';
+        const icon       = correct ? '✓' : '✕';
+        const statusClass = correct ? 'correct' : 'incorrect';
+        const answerText  = correct
+          ? `You answered ${userLabel} — correct`
+          : `You answered ${userLabel} — incorrect`;
+        return `
+          <div class="recap-row ${statusClass}">
+            <div class="recap-icon">${icon}</div>
+            <div class="recap-question">${card.title}</div>
+            <div class="recap-answer">${answerText}</div>
+            <div class="recap-meta">
+              <div class="recap-category">${card.category}</div>
+              <div class="recap-reason">${card.reason}</div>
+            </div>
+          </div>`;
+      }).join('');
 
       stack.style.display   = 'none';
       actions.style.display = 'none';
