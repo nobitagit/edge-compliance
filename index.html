@@ -138,6 +138,7 @@
     }
 
     .card-number {
+      display: none;
       font-size: 0.65rem;
       letter-spacing: 0.14em;
       text-transform: uppercase;
@@ -181,16 +182,17 @@
       pointer-events: none;
       text-transform: uppercase;
       transition: opacity 0.05s;
+      color: #f6f1e7;
     }
     .stamp-yes {
       left: 24px;
-      color: var(--swipe-yes);
+      background: var(--swipe-yes);
       border-color: var(--swipe-yes);
       transform: rotate(-12deg);
     }
     .stamp-no {
       right: 24px;
-      color: var(--swipe-no);
+      background: var(--swipe-no);
       border-color: var(--swipe-no);
       transform: rotate(12deg);
     }
