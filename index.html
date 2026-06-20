@@ -978,7 +978,7 @@
     function showEnd() {
       const correctCount = responses.filter(r => r.correct).length;
 
-      document.getElementById('endTitle').textContent = `You guessed ${correctCount} answers`;
+      document.getElementById('endTitle').textContent = `You guessed ${correctCount} ${correctCount === 1 ? 'answer' : 'answers'}`;
 
       // Build recap
       const recapEl = document.getElementById('recap');
