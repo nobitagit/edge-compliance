@@ -246,6 +246,18 @@
       line-height: 1.2;
     }
 
+    .intro-title-img {
+      width: min(320px, 80vw);
+      height: auto;
+      display: block;
+    }
+
+    .intro-hint-img {
+      width: min(280px, 75vw);
+      height: auto;
+      display: block;
+    }
+
     .intro-desc {
       font-size: 0.85rem;
       font-weight: 300;
@@ -465,8 +477,8 @@
 
   <!-- Intro screen -->
   <div class="intro-screen visible" id="introScreen">
-    <div class="intro-title">Welcome to the<br>compliance game.</div>
-    <div class="intro-desc">You'll be shown a series of questions — swipe right for <em>Yes</em>, swipe left for <em>No</em>. At the end, you'll find out how well you know your compliance rules. Good luck.</div>
+    <img src="title.png" alt="Welcome to the compliance game" class="intro-title-img" />
+    <div class="intro-desc">Think you know what makes a medical device? Let's put it to the test.<br><br>Check out the scenarios ahead: swipe right for <em>Yes</em>, and swipe left for <em>No</em>.<br><br>Finish the game to see your final score.<br>Good luck!</div>
     <button class="restart-btn" id="startBtn">Start</button>
   </div>
 
