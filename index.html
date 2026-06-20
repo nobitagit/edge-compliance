@@ -760,21 +760,6 @@
     ];
 
     // Result buckets: { min (inclusive), max (exclusive), message }
-    const BUCKETS = [
-      {
-        min: 0, max: 5,
-        message: "You have done many mistakes.",
-      },
-      {
-        min: 5, max: 8,
-        message: "You have done not too many mistakes.",
-      },
-      {
-        min: 8, max: Infinity,
-        message: "You've done pretty much everything correctly. You are a champion.",
-      },
-    ];
-
     // ──────────────────────────────────────────────────────────────────────
 
     const stack       = document.getElementById('stack');
@@ -980,12 +965,8 @@
 
     function showEnd() {
       const correctCount = responses.filter(r => r.correct).length;
-      const total        = GAME_CARDS.length;
-      const bucket       = BUCKETS.find(b => correctCount >= b.min && correctCount < b.max);
 
-      document.getElementById('endScore').textContent = `${correctCount} / ${total} correct`;
-      document.getElementById('endTitle').innerHTML   = bucket.message;
-      document.getElementById('endSub').textContent   = 'All cards reviewed';
+      document.getElementById('endTitle').textContent = `You guessed ${correctCount} answers`;
 
       // Build recap
       const recapEl = document.getElementById('recap');
