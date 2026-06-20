@@ -1,0 +1,14 @@
+.DS_Store
+
+# Editor / OS cruft
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
