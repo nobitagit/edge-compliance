@@ -217,6 +217,14 @@
     .btn:active { transform: scale(0.92); box-shadow: none; }
 
     /* ── Intro screen ── */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    .fade-in {
+      animation: fadeIn 0.35s ease forwards;
+    }
+
     .intro-screen {
       display: none;
       flex-direction: column;
@@ -771,7 +779,7 @@
       introScreen.classList.add('visible');
       stack.style.display   = 'none';
       actions.style.display = 'none';
-      endScreen.classList.remove('visible');
+      endScreen.classList.remove('visible', 'fade-in');
       counter.style.visibility = 'hidden';
       progressBar.parentElement.style.opacity = '0';
       progressBar.style.width = '0%';
@@ -783,7 +791,13 @@
       actions.style.display = '';
       counter.style.visibility = 'visible';
       progressBar.parentElement.style.opacity = '1';
+      stack.classList.remove('fade-in');
+      actions.classList.remove('fade-in');
       buildStack();
+      // Trigger reflow so the animation restarts
+      void stack.offsetWidth;
+      stack.classList.add('fade-in');
+      actions.classList.add('fade-in');
     }
 
     startBtn.addEventListener('click', startGame);
@@ -982,7 +996,7 @@
 
       stack.style.display   = 'none';
       actions.style.display = 'none';
-      endScreen.classList.add('visible');
+      endScreen.classList.add('visible', 'fade-in');
       progressBar.style.width = '100%';
       counter.textContent = `${total} / ${total}`;
     }
