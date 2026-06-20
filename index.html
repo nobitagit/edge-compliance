@@ -782,6 +782,7 @@
       counter.style.visibility = 'hidden';
       progressBar.parentElement.style.opacity = '0';
       progressBar.style.width = '0%';
+      if (location.hash !== '#start') history.replaceState(null, '', '#start');
     }
 
     function startGame() {
@@ -797,9 +798,20 @@
       void stack.offsetWidth;
       stack.classList.add('fade-in');
       actions.classList.add('fade-in');
+      if (location.hash !== '#play') history.replaceState(null, '', '#play');
     }
 
-    startBtn.addEventListener('click', startGame);
+    startBtn.addEventListener('click', () => {
+      location.hash = '#play';
+    });
+
+    window.addEventListener('hashchange', () => {
+      if (location.hash === '#play') {
+        startGame();
+      } else {
+        showIntro();
+      }
+    });
 
     const GAME_SIZE = 5;
 
@@ -996,7 +1008,7 @@
       counter.textContent = `${total} / ${total}`;
     }
 
-    restartBtn.addEventListener('click', showIntro);
+    restartBtn.addEventListener('click', () => { location.hash = '#start'; });
 
     btnYes.addEventListener('click', () => { if (current < GAME_CARDS.length) dismissCard('right'); });
     btnNo.addEventListener('click',  () => { if (current < GAME_CARDS.length) dismissCard('left'); });
@@ -1124,7 +1136,11 @@
     });
 
     // ── Init ──────────────────────────────────────────────────────────────
-    showIntro();
+    if (location.hash === '#play') {
+      startGame();
+    } else {
+      showIntro();
+    }
   </script>
 </body>
 </html>
