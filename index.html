@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Edge Cards</title>
+  <link rel="icon" type="image/x-icon" media="(prefers-color-scheme: light)" href="https://images.squarespace-cdn.com/content/v1/68f35a6a8bd4c01410b390e5/cf19be91-de29-4f88-812c-3c29fc00ae37/favicon.ico?format=100w">
+  <link rel="icon" type="image/x-icon" media="(prefers-color-scheme: dark)" href="https://images.squarespace-cdn.com/content/v1/68f35a6a8bd4c01410b390e5/f668ff88-9e05-4ffb-9a01-5e23bc4e8072/favicon.ico?format=100w">
   <style>
     /* ── Palette & Fonts (Edge Compliance vibe) ── */
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500&display=swap');
@@ -764,6 +766,7 @@
     const startBtn    = document.getElementById('startBtn');
 
     function showIntro() {
+      window.scrollTo(0, 0);
       introScreen.classList.add('visible');
       stack.style.display   = 'none';
       actions.style.display = 'none';
