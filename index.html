@@ -1008,7 +1008,7 @@
       counter.textContent = `${total} / ${total}`;
     }
 
-    restartBtn.addEventListener('click', () => { location.hash = '#start'; });
+    restartBtn.addEventListener('click', () => { window.location.href = 'https://www.edgecompliance.co/portfolio/is-it-medical-device'; });
 
     btnYes.addEventListener('click', () => { if (current < GAME_CARDS.length) dismissCard('right'); });
     btnNo.addEventListener('click',  () => { if (current < GAME_CARDS.length) dismissCard('left'); });
