@@ -495,7 +495,7 @@
         Follow me on LinkedIn
       </a>
     </div>
-    <button class="restart-btn" id="restartBtn">Start over</button>
+    <a href="https://www.edgecompliance.co/portfolio/is-it-medical-device" class="restart-btn" id="restartBtn">Start over</a>
   </div>
 
   <script>
@@ -770,7 +770,6 @@
     const progressBar = document.getElementById('progressBar');
     const btnNo       = document.getElementById('btnNo');
     const btnYes      = document.getElementById('btnYes');
-    const restartBtn  = document.getElementById('restartBtn');
     const startBtn    = document.getElementById('startBtn');
 
     function showIntro() {
@@ -1008,7 +1007,6 @@
       counter.textContent = `${total} / ${total}`;
     }
 
-    restartBtn.addEventListener('click', () => { window.location.href = 'https://www.edgecompliance.co/portfolio/is-it-medical-device'; });
 
     btnYes.addEventListener('click', () => { if (current < GAME_CARDS.length) dismissCard('right'); });
     btnNo.addEventListener('click',  () => { if (current < GAME_CARDS.length) dismissCard('left'); });
