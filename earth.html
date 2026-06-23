@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Edge — Globe</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f0f0f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      overflow: hidden;
+      font-family: 'Inter', sans-serif;
+    }
+
+    canvas {
+      display: block;
+      cursor: grab;
+      touch-action: none;
+    }
+    canvas:active { cursor: grabbing; }
+
+    .globe-title {
+      position: fixed;
+      top: 48px;
+      left: 0; right: 0;
+      text-align: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.2rem, 3vw, 1.8rem);
+      font-weight: 300;
+      font-style: italic;
+      color: #f6f1e7;
+      letter-spacing: 0.04em;
+      pointer-events: none;
+    }
+  </style>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,300&display=swap" />
+</head>
+<body>
+  <div class="globe-title">The sun never sets on the Edge Empire</div>
+  <canvas id="globe"></canvas>
+
+  <script>
+    // ── Pins ─────────────────────────────────────────────────────────────────
+    // { lat, lng, label }  lat/lng in degrees
+    const PINS = [
+      { lat:  52.5200, lng:  13.4050, label: 'Berlin'     },
+      { lat:  47.3769, lng:   8.5417, label: 'Zurich'     },
+      { lat:   1.3521, lng: 103.8198, label: 'Singapore'  },
+      { lat:  31.2304, lng: 121.4737, label: 'Shanghai'   },
+      { lat: -41.2865, lng: 174.7762, label: 'Wellington' },
+      { lat:  51.5074, lng:  -0.1278, label: 'London'     },
+    ];
+
+    // ── Canvas setup ─────────────────────────────────────────────────────────
+    const canvas = document.getElementById('globe');
+    const ctx    = canvas.getContext('2d');
+
+    const SIZE   = Math.min(window.innerWidth, window.innerHeight, 600);
+    canvas.width  = SIZE;
+    canvas.height = SIZE;
+    const cx = SIZE / 2;
+    const cy = SIZE / 2;
+    const R  = SIZE * 0.42;
+
+    // ── Rotation state ───────────────────────────────────────────────────────
+    // We store rotation as two angles: yaw (λ, around vertical axis)
+    // and pitch (φ, around horizontal axis).  Both in radians.
+    let rotLng = -10 * Math.PI / 180;   // initial longitude offset
+    let rotLat =  20 * Math.PI / 180;   // tilt slightly toward viewer
+
+    // ── Drag state ───────────────────────────────────────────────────────────
+    let dragging  = false;
+    let lastX = 0, lastY = 0;
+    let velX  = 0, velY  = 0;
+    let lastT = 0;
+
+    // ── Maths helpers ────────────────────────────────────────────────────────
+    const DEG = Math.PI / 180;
+
+    // Convert geographic coords → 3-D unit vector
+    function geoToVec(lat, lng) {
+      const φ = lat * DEG;
+      const λ = lng * DEG;
+      return [
+        Math.cos(φ) * Math.cos(λ),
+        Math.sin(φ),
+        Math.cos(φ) * Math.sin(λ),
+      ];
+    }
+
+    // Apply yaw (rotLng) then pitch (rotLat) to a 3-D vector
+    function rotate([x, y, z]) {
+      // Yaw around Y axis (longitude rotation)
+      const x1 =  x * Math.cos(rotLng) + z * Math.sin(rotLng);
+      const y1 =  y;
+      const z1 = -x * Math.sin(rotLng) + z * Math.cos(rotLng);
+      // Pitch around X axis (latitude tilt)
+      const x2 =  x1;
+      const y2 =  y1 * Math.cos(rotLat) - z1 * Math.sin(rotLat);
+      const z2 =  y1 * Math.sin(rotLat) + z1 * Math.cos(rotLat);
+      return [x2, y2, z2];
+    }
+
+    // Project rotated 3-D point → canvas 2-D
+    function project(vec) {
+      const [x, y, z] = rotate(vec);
+      return { x: cx - x * R, y: cy - y * R, visible: z > 0 };
+    }
+
+    // ── GeoJSON land outlines ────────────────────────────────────────────────
+    // We fetch Natural Earth 110m land polygons (small, ~50 KB).
+    let landFeatures = [];
+
+    fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json')
+      .then(r => r.json())
+      .then(topo => {
+        // Convert TopoJSON → GeoJSON polygons manually (lightweight)
+        const land = topo.objects.land;
+        const arcs = topo.arcs;
+        const scale = topo.transform.scale;
+        const translate = topo.transform.translate;
+
+        // Decode a single arc into [lng, lat] pairs
+        function decodeArc(arcIdx) {
+          const reversed = arcIdx < 0;
+          const idx = reversed ? ~arcIdx : arcIdx;
+          let x = 0, y = 0;
+          const pts = arcs[idx].map(([dx, dy]) => {
+            x += dx; y += dy;
+            return [x * scale[0] + translate[0], y * scale[1] + translate[1]];
+          });
+          return reversed ? pts.reverse() : pts;
+        }
+
+        function ringCoords(ring) {
+          return ring.flatMap(arcIdx => decodeArc(arcIdx));
+        }
+
+        function geometryCoords(geom) {
+          if (geom.type === 'Polygon') {
+            return [geom.arcs.map(ringCoords)];
+          } else if (geom.type === 'MultiPolygon') {
+            return geom.arcs.map(poly => poly.map(ringCoords));
+          }
+          return [];
+        }
+
+        if (land.type === 'GeometryCollection') {
+          landFeatures = land.geometries.flatMap(geometryCoords);
+        } else {
+          landFeatures = geometryCoords(land);
+        }
+
+        render();
+      })
+      .catch(() => render()); // render ocean + pins even if fetch fails
+
+    // ── Draw ─────────────────────────────────────────────────────────────────
+    function drawGlobe() {
+      // Ocean
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, Math.PI * 2);
+      ctx.fillStyle = '#1a2a3a';
+      ctx.fill();
+
+      // Atmosphere glow
+      const grd = ctx.createRadialGradient(cx, cy, R * 0.85, cx, cy, R * 1.05);
+      grd.addColorStop(0, 'rgba(80,140,200,0)');
+      grd.addColorStop(1, 'rgba(80,140,200,0.18)');
+      ctx.beginPath();
+      ctx.arc(cx, cy, R * 1.05, 0, Math.PI * 2);
+      ctx.fillStyle = grd;
+      ctx.fill();
+    }
+
+    function drawGraticules() {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth   = 0.5;
+
+      // Clip to sphere
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, Math.PI * 2);
+      ctx.clip();
+
+      // Parallels every 30°
+      for (let lat = -60; lat <= 60; lat += 30) {
+        ctx.beginPath();
+        let first = true;
+        for (let lng = -180; lng <= 180; lng += 2) {
+          const p = project(geoToVec(lat, lng));
+          if (!p.visible) { first = true; continue; }
+          first ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+          first = false;
+        }
+        ctx.stroke();
+      }
+
+      // Meridians every 30°
+      for (let lng = -180; lng < 180; lng += 30) {
+        ctx.beginPath();
+        let first = true;
+        for (let lat = -90; lat <= 90; lat += 2) {
+          const p = project(geoToVec(lat, lng));
+          if (!p.visible) { first = true; continue; }
+          first ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+          first = false;
+        }
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    // Interpolate the limb crossing point between two 3-D vectors a and b
+    // (one visible, one hidden) by finding t where z(t) = 0.
+    function lerpLimb(a, b) {
+      // a and b are rotated [rx,ry,rz] triples
+      const t = a[2] / (a[2] - b[2]);
+      const rx = a[0] + t * (b[0] - a[0]);
+      const ry = a[1] + t * (b[1] - a[1]);
+      return { x: cx - rx * R, y: cy - ry * R };
+    }
+
+    function drawLand() {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, Math.PI * 2);
+      ctx.clip();
+
+      ctx.fillStyle   = 'transparent';
+      ctx.strokeStyle = '#ffa9ba';
+      ctx.lineWidth   = 0.8;
+
+      for (const polygon of landFeatures) {
+        for (const ring of polygon) {
+          // Build rotated 3-D points for this ring
+          const rot3 = ring.map(([lng, lat]) => rotate(geoToVec(lat, lng)));
+
+          // Check if any point is visible at all — skip fully-back rings
+          if (rot3.every(([,,z]) => z <= 0)) continue;
+
+          ctx.beginPath();
+          let penDown = false;
+
+          for (let i = 0; i < rot3.length; i++) {
+            const cur  = rot3[i];
+            const curV = cur[2] > 0;
+
+            if (i > 0) {
+              const prev  = rot3[i - 1];
+              const prevV = prev[2] > 0;
+
+              // Crossing from back → front: insert limb entry point
+              if (!prevV && curV) {
+                const lp = lerpLimb(prev, cur);
+                ctx.moveTo(lp.x, lp.y);
+                penDown = true;
+              }
+              // Crossing from front → back: insert limb exit point, lift pen
+              if (prevV && !curV) {
+                const lp = lerpLimb(prev, cur);
+                ctx.lineTo(lp.x, lp.y);
+                penDown = false;
+              }
+            }
+
+            if (curV) {
+              const px = cx - cur[0] * R;
+              const py = cy - cur[1] * R;
+              penDown ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+              penDown = true;
+            }
+          }
+
+          ctx.closePath();
+          ctx.stroke();
+        }
+      }
+
+      ctx.restore();
+    }
+
+    function drawPins() {
+      for (const pin of PINS) {
+        const vec = geoToVec(pin.lat, pin.lng);
+        const p   = project(vec);
+        if (!p.visible) continue;
+
+        const px = p.x, py = p.y;
+
+        // Pin stem
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px, py - 18);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth   = 1.5;
+        ctx.stroke();
+
+        // Pin head
+        ctx.beginPath();
+        ctx.arc(px, py - 24, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#e8f4ff';
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth   = 1.5;
+        ctx.stroke();
+
+        // Label
+        ctx.font         = '500 11px Inter, sans-serif';
+        ctx.fillStyle    = '#ffffff';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(pin.label, px, py - 32);
+      }
+    }
+
+    function drawShadow() {
+      // Subtle dark limb on the right edge to give depth
+      const grd = ctx.createRadialGradient(cx + R * 0.3, cy - R * 0.3, R * 0.1, cx, cy, R);
+      grd.addColorStop(0, 'rgba(0,0,0,0)');
+      grd.addColorStop(1, 'rgba(0,0,0,0.35)');
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, SIZE, SIZE);
+      ctx.restore();
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, SIZE, SIZE);
+      drawGlobe();
+      drawGraticules();
+      drawLand();
+      drawShadow();
+      drawPins();
+    }
+
+    // ── Inertia loop ─────────────────────────────────────────────────────────
+    function inertiaLoop() {
+      if (dragging) return;
+      if (Math.abs(velX) < 0.0001 && Math.abs(velY) < 0.0001) return;
+      rotLng += velX;
+      rotLat += velY;
+      clampPitch();
+      velX *= 0.95;
+      velY *= 0.95;
+      render();
+      requestAnimationFrame(inertiaLoop);
+    }
+
+    // ── Auto-spin loop ────────────────────────────────────────────────────────
+    const SPIN_SPEED = 0.0008; // radians per frame — very gentle
+    let spinning = false;
+
+    function spinLoop() {
+      if (dragging) { spinning = false; return; }
+      rotLng += SPIN_SPEED;
+      render();
+      requestAnimationFrame(spinLoop);
+    }
+
+    function startSpin() {
+      if (spinning) return;
+      spinning = true;
+      velX = 0; velY = 0; // kill any remaining inertia
+      requestAnimationFrame(spinLoop);
+    }
+
+    function clampPitch() {
+      rotLat = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rotLat));
+    }
+
+    // ── Pointer events ───────────────────────────────────────────────────────
+    function getXY(e) {
+      if (e.touches) return [e.touches[0].clientX, e.touches[0].clientY];
+      return [e.clientX, e.clientY];
+    }
+
+    canvas.addEventListener('mousedown',  onDown);
+    canvas.addEventListener('touchstart', onDown, { passive: true });
+    document.addEventListener('mousemove',  onMove);
+    document.addEventListener('touchmove',  onMove, { passive: true });
+    document.addEventListener('mouseup',    onUp);
+    document.addEventListener('touchend',   onUp);
+
+    function onDown(e) {
+      dragging = true;
+      [lastX, lastY] = getXY(e);
+      velX = velY = 0;
+      lastT = Date.now();
+    }
+
+    function onMove(e) {
+      if (!dragging) return;
+      const [x, y] = getXY(e);
+      const dx = x - lastX;
+      const dy = y - lastY;
+      const dt = Math.max(Date.now() - lastT, 1);
+
+      rotLng -= dx * 0.005;
+      rotLat += dy * 0.005;
+      clampPitch();
+
+      velX = -dx * 0.005 * (16 / dt);
+      velY = dy * 0.005 * (16 / dt);
+
+      lastX = x; lastY = y;
+      lastT = Date.now();
+      render();
+    }
+
+    function onUp() {
+      if (!dragging) return;
+      dragging = false;
+      requestAnimationFrame(inertiaLoop);
+    }
+
+    // ── Auto-rotate when idle ─────────────────────────────────────────────────
+    let idleTimer;
+    function resetIdle() {
+      clearTimeout(idleTimer);
+      spinning = false;
+      idleTimer = setTimeout(startSpin, 3000);
+    }
+    canvas.addEventListener('mousedown', resetIdle);
+    canvas.addEventListener('touchstart', resetIdle);
+    resetIdle(); // start auto-rotate after 3s on load
+
+    // ── Initial render ────────────────────────────────────────────────────────
+    render();
+  </script>
+</body>
+</html>
